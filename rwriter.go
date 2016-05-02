@@ -60,8 +60,32 @@ func (w *Rwriter) Close() error {
 func (w *Rwriter) ReceiveFromChannelAndWriteToServer(
     ch chan Rhash, wg *sync.WaitGroup) {
 
-  defer wg.Done()
+  // Start the goroutine for resp checking.
+  resp_ch := make(chan *redis.Resp)
+  go w.ReceiveRespAndCheckForNil(resp_ch, wg)
+
   for h := range ch {
-    w.WriteRhash(h)
+    // Send resp to the next goroutine for checking success of the write.
+    resp_ch <- w.WriteRhash(h)
+  }
+  // We end up here when ch is closed.
+  close(resp_ch)
+}
+
+/*
+ * Receive response (resp) from ReceiveFromChannelAndWriteToServer and check
+ * them for nil. When this func is done checking all write responses, it'll
+ * lower the waitgroup count, unblocking the caller of
+ * ReceiveFromChannelAndWriteToServer().
+ * This is brittle; will have to handle panic in future.
+ */
+func (w *Rwriter) ReceiveRespAndCheckForNil(
+    resp_ch chan *redis.Resp, wg *sync.WaitGroup) {
+
+  defer wg.Done()
+  for resp := range resp_ch {
+    if resp.Err != nil {
+      panic(resp.Err)
+    }
   }
 }

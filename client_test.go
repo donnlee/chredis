@@ -57,9 +57,9 @@ func TestCmd(t *testing.T) {
     ch <- rhash
   }
   close(ch)
-  fmt.Println("Waiting for goroutine to finish...")
+  fmt.Println("Waiting for goroutines to finish...")
   wg.Wait()
-  fmt.Println("Goroutine is done. End of test func.")
+  fmt.Println("Goroutines are done. End of test func.")
   // Clean-up.
   for i := 0; i < 5; i++ {
     key = fmt.Sprintf("%s:%d", randstr, i)
