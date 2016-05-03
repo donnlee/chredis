@@ -10,7 +10,7 @@ import(
   "github.com/stretchr/testify/require"
 )
 
-func dial_and_create(t *testing.T) (*Rwriter, error) {
+func dial_and_create(t *testing.T) (*Rclient, error) {
   w, err := Dial("tcp", "localhost:6379")
   require.Nil(t, err)
   return w, err
@@ -24,8 +24,12 @@ func randStr() string {
   return hex.EncodeToString(b)
 }
 
-func TestCmd(t *testing.T) {
-  w, err := dial_and_create(t)
+func TestWriter(t *testing.T) {
+  // Use the redis writer interface.
+  var w Rwriter
+  var err error
+
+  w, err = dial_and_create(t)
   require.Nil(t, err)
 
   defer w.Close()
