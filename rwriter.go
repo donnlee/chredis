@@ -11,7 +11,6 @@ type Rwriter interface {
   WriteRhash(h Rhash) *redis.Resp
   Close() error
   ReceiveFromChannelAndWriteToServer(ch chan Rhash, wg *sync.WaitGroup)
-  ReceiveRespAndCheckForNil(resp_ch chan *redis.Resp, wg *sync.WaitGroup)
 }
 
 type Rclient struct {
@@ -72,7 +71,7 @@ func (rc *Rclient) ReceiveFromChannelAndWriteToServer(
 
   // Start the goroutine for resp checking.
   resp_ch := make(chan *redis.Resp)
-  go rc.ReceiveRespAndCheckForNil(resp_ch, wg)
+  go rc.receiveRespAndCheckForNil(resp_ch, wg)
 
   for h := range ch {
     // Send resp to the next goroutine for checking success of the write.
@@ -89,7 +88,7 @@ func (rc *Rclient) ReceiveFromChannelAndWriteToServer(
  * ReceiveFromChannelAndWriteToServer().
  * Panic can be recover()'d by callers of this func.
  */
-func (rc *Rclient) ReceiveRespAndCheckForNil(
+func (rc *Rclient) receiveRespAndCheckForNil(
     resp_ch chan *redis.Resp, wg *sync.WaitGroup) {
 
   defer wg.Done()
