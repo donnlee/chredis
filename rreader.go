@@ -91,7 +91,7 @@ func (rc *Rclient) PrettyPrintRhashFromChannel(
     k := rh.Key
     fv_map := rh.Fv_map
 
-    if len(fv_map) > 1 {
+    if len(fv_map) > 0 {
       fmt.Println(k)
       for field, value := range fv_map {
         fmt.Printf("  %s -> %s\n", field, value)
