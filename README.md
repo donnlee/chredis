@@ -2,5 +2,5 @@
 
 * Supports redis hashes only at the moment.
 * Redis Writer (rwriter) done.
-* Next: Redis reader (rreader).
+* Redis Reader (rreader) done.
 
