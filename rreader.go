@@ -20,8 +20,7 @@ type Rreader interface {
 
 // Read a redis hash from the redis server.
 func (rc *Rclient) readHash(key string) (map[string]string, error) {
-  m, err := rc.Cmd("HGETALL", key).Map()
-  return m, err
+  return rc.Cmd("HGETALL", key).Map()
 }
 
 // Given a key, read a hash, returning a Rhash struct.
