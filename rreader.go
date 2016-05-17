@@ -20,7 +20,16 @@ type Rreader interface {
 
 // Read a redis hash from the redis server.
 func (rc *Rclient) readHash(key string) (map[string]string, error) {
-  return rc.Cmd("HGETALL", key).Map()
+  resp := rc.Cmd("HGETALL", key)
+  if redis.IsTimeout(resp) {
+    fmt.Println("Got redis timeout error on key:", key)
+    return nil, resp.Err
+  } else if resp.IsType(redis.IOErr) {
+    // TODO: If redis-server dies, we end up here. Add error handling.
+    fmt.Println("Got redis IOErr on key:", key)
+    return nil, resp.Err
+  }
+  return resp.Map()
 }
 
 // Given a key, read a hash, returning a Rhash struct.
@@ -53,6 +62,7 @@ func (rc *Rclient) ReceiveFromChannelAndReadFromServer(
 
   for key := range key_ch {
     rh, err := rc.ReadRhash(key)
+    // TODO: If redis server dies, we panic here.
     if err != nil {panic(err)}
     rh_chan <- rh
   }
