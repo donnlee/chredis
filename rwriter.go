@@ -95,6 +95,7 @@ func (rc *Rclient) receiveRespAndCheckForNil(
 	defer wg.Done()
 	for resp := range resp_ch {
 		if resp.Err != nil {
+			// TODO: Do something better than panic.
 			panic(resp.Err)
 		}
 	}

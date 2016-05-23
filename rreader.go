@@ -13,6 +13,7 @@ type Rreader interface {
 	Close() error
 	ReceiveFromChannelAndReadFromServer(
 		key_ch chan string,
+		error_ch chan error,
 		wg *sync.WaitGroup,
 		f func(rh_ch chan Rhash, wg *sync.WaitGroup))
 	PrintRhashFromChannel(rh_ch chan Rhash, wg *sync.WaitGroup)
@@ -53,6 +54,7 @@ func (rc *Rclient) ReadRhash(key string) (Rhash, error) {
  */
 func (rc *Rclient) ReceiveFromChannelAndReadFromServer(
 	key_ch chan string,
+	error_ch chan error,
 	wg *sync.WaitGroup,
 	f func(rh_ch chan Rhash, wg *sync.WaitGroup)) {
 
@@ -63,9 +65,15 @@ func (rc *Rclient) ReceiveFromChannelAndReadFromServer(
 
 	for key := range key_ch {
 		rh, err := rc.ReadRhash(key)
-		// TODO: If redis server dies, we panic here.
+		// TODO: If redis server dies, we panic here. err is type *net.OpError
+		// Plan: Propagate err to caller via channel. Then whoever does Dial() can reconnect.
 		if err != nil {
-			panic(err)
+			fmt.Printf("error type: %T\n", err)
+			fmt.Println(err)
+			//panic(err)
+			error_ch <- err
+			// If err, don't send empty/nil-laced rh to rh_chan. Continue.
+			continue
 		}
 		rh_chan <- rh
 	}
