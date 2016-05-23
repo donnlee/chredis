@@ -37,6 +37,9 @@ func explodeMapStringString(m map[string]string) []interface{} {
  */
 func Dial(protocol, addr string) (*Rclient, error) {
 	c, err := redis.Dial(protocol, addr)
+	if err != nil {
+		return nil, err
+	}
 	rc := Rclient{}
 	rc.Client = *c
 	return &rc, err
