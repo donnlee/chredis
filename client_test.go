@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func dial_and_create(t *testing.T) (*Rclient, error) {
+func dialAndCreate(t *testing.T) (*Rclient, error) {
 	w, err := Dial("tcp", "localhost:6379")
 	require.Nil(t, err)
 	return w, err
@@ -30,7 +30,7 @@ func TestWriter(t *testing.T) {
 	var w Rwriter
 	var err error
 
-	w, err = dial_and_create(t)
+	w, err = dialAndCreate(t)
 	require.Nil(t, err)
 
 	defer w.Close()

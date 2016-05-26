@@ -7,17 +7,18 @@ import (
 	"github.com/mediocregopher/radix.v2/redis"
 )
 
+// Rreader defines methods a redis reader can do.
 type Rreader interface {
 	Cmd(cmd string, args ...interface{}) *redis.Resp
 	ReadRhash(key string) (Rhash, error)
 	Close() error
 	ReceiveFromChannelAndReadFromServer(
-		key_ch chan string,
-		error_ch chan error,
+		keyCh chan string,
+		errorCh chan error,
 		wg *sync.WaitGroup,
-		f func(rh_ch chan Rhash, wg *sync.WaitGroup))
-	PrintRhashFromChannel(rh_ch chan Rhash, wg *sync.WaitGroup)
-	PrettyPrintRhashFromChannel(rh_ch chan Rhash, wg *sync.WaitGroup)
+		f func(rhCh chan Rhash, wg *sync.WaitGroup))
+	PrintRhashFromChannel(rhCh chan Rhash, wg *sync.WaitGroup)
+	PrettyPrintRhashFromChannel(rhCh chan Rhash, wg *sync.WaitGroup)
 }
 
 // Read a redis hash from the redis server.
@@ -34,7 +35,7 @@ func (rc *Rclient) readHash(key string) (map[string]string, error) {
 	return resp.Map()
 }
 
-// Given a key, read a hash, returning a Rhash struct.
+// ReadRhash returns a Rhash struct, given a key.
 func (rc *Rclient) ReadRhash(key string) (Rhash, error) {
 	m, err := rc.readHash(key)
 	if err != nil {
@@ -44,26 +45,23 @@ func (rc *Rclient) ReadRhash(key string) (Rhash, error) {
 	return Rhash{key, m}, nil
 }
 
-/*
- * Given a channel, waitgroup, and goroutine "f" (func), this func retrieves
- * keys from the channel, fetches Rhash'es from the redis server, and
- * sends the Rhash'es to goroutine "f" for further processing (whatever
- * the goroutine "f" wants to do with them. For example, print them with
- * PrettyPrintRhashFromChannel().
- * Note, "f" should lower the waitgroup count, not this func.
- */
+// ReceiveFromChannelAndReadFromServer retrieves keys from given channel,
+// fetches Rhash'es from the redis server, and sends the Rhash'es to goroutine
+// "f" for further processing (whatever "f" wants to do with them. For
+// example, print them with example func PrettyPrintRhashFromChannel().
+// Note, "f" should lower the waitgroup count, not this func.
 func (rc *Rclient) ReceiveFromChannelAndReadFromServer(
-	key_ch chan string,
-	error_ch chan error,
+	keyCh chan string,
+	errorCh chan error,
 	wg *sync.WaitGroup,
-	f func(rh_ch chan Rhash, wg *sync.WaitGroup)) {
+	f func(rhCh chan Rhash, wg *sync.WaitGroup)) {
 
 	// Create a channel for the fetched Rhash'es.
-	rh_chan := make(chan Rhash)
+	rhChan := make(chan Rhash)
 	// Start the goroutine that will receive Rash'es.
-	go f(rh_chan, wg)
+	go f(rhChan, wg)
 
-	for key := range key_ch {
+	for key := range keyCh {
 		rh, err := rc.ReadRhash(key)
 		// TODO: If redis server dies, we panic here. err is type *net.OpError
 		// Plan: Propagate err to caller via channel. Then whoever does Dial() can reconnect.
@@ -71,49 +69,42 @@ func (rc *Rclient) ReceiveFromChannelAndReadFromServer(
 			fmt.Printf("error type: %T\n", err)
 			fmt.Println(err)
 			//panic(err)
-			error_ch <- err
-			// If err, don't send empty/nil-laced rh to rh_chan. Continue.
+			errorCh <- err
+			// If err, don't send empty/nil-laced rh to rhChan. Continue.
 			continue
 		}
-		rh_chan <- rh
+		rhChan <- rh
 	}
-	// We end up here when key_ch is closed.
-	close(rh_chan)
+	// We end up here when keyCh is closed.
+	close(rhChan)
 }
 
-/*
- * Simple goroutine for ReceiveFromChannelAndReadFromServer that simply
- * prints the retreived Rhash'es. Pass this func to
- * ReceiveFromChannelAndReadFromServer and RFCARFS will send Rhash'es to
- * this func (PrintRhashFromChannel). Good for testing.
- */
+// PrintRhashFromChannel is an example func for
+// ReceiveFromChannelAndReadFromServer that simply prints the retrieved
+// Rhash'es. Pass this func to RFCARFS and it will send Rhash'es to this
+// func.
 func (rc *Rclient) PrintRhashFromChannel(
-	rh_ch chan Rhash, wg *sync.WaitGroup) {
+	rhCh chan Rhash, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
-	for rh := range rh_ch {
+	for rh := range rhCh {
 		fmt.Println("PrintRhashFromChannel:", rh)
 	}
 	fmt.Println("Detected end of Rhash channel.")
 }
 
-/*
- * Simple goroutine for ReceiveFromChannelAndReadFromServer that
- * prints Rhash'es in human-readable form. Pass this func to
- * ReceiveFromChannelAndReadFromServer.
- * Demonstrates how RFCARFS can send to any goroutine easily.
- */
+// PrettyPrintRhashFromChannel is a pretty version of PrintRhashFromChannel.
 func (rc *Rclient) PrettyPrintRhashFromChannel(
-	rh_ch chan Rhash, wg *sync.WaitGroup) {
+	rhCh chan Rhash, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for rh := range rh_ch {
+	for rh := range rhCh {
 		k := rh.Key
-		fv_map := rh.Fv_map
+		fvMap := rh.FvMap
 
-		if len(fv_map) > 0 {
+		if len(fvMap) > 0 {
 			fmt.Println(k)
-			for field, value := range fv_map {
+			for field, value := range fvMap {
 				fmt.Printf("  %s -> %s\n", field, value)
 			}
 		} else {

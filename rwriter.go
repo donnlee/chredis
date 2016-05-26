@@ -53,7 +53,7 @@ func (rc *Rclient) Cmd(cmd string, args ...interface{}) *redis.Resp {
 func (rc *Rclient) WriteRhash(h Rhash) *redis.Resp {
 	// redis.Cmd() accepts a slice of interface{}, so can't use []string.
 	rhashAsSlice := []interface{}{h.Key}
-	fvMapAsSlice := explodeMapStringString(h.Fv_map)
+	fvMapAsSlice := explodeMapStringString(h.FvMap)
 	rhashAsSlice = append(rhashAsSlice, fvMapAsSlice...)
 	// Send slice to variadic fn with triple-dots ("myslice...")
 	return rc.Cmd("HMSET", rhashAsSlice...)
